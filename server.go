@@ -21,6 +21,7 @@ type config struct {
 	AllowUpgrades bool
 	Cookie        string
 	NewId         func(r *http.Request) string
+	CorsHeader    string
 }
 
 // Server is the server of engine.io.
@@ -57,6 +58,7 @@ func NewServer(transports []string) (*Server, error) {
 			AllowUpgrades: true,
 			Cookie:        "io",
 			NewId:         newId,
+			CorsHeader:    "",
 		},
 		socketChan:     make(chan Conn),
 		serverSessions: newServerSessions(),
@@ -114,9 +116,17 @@ func (s *Server) SetSessionManager(sessions Sessions) {
 	s.serverSessions = sessions
 }
 
+func (s *Server) SetCorsHeader(url string) {
+	s.config.CorsHeader = url
+}
+
 // ServeHTTP handles http request.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	if s.config.CorsHeader != "" {
+		w.Header().Add("Access-Control-Allow-Origin", s.config.CorsHeader)
+	}
 
 	sid := r.URL.Query().Get("sid")
 	conn := s.serverSessions.Get(sid)
